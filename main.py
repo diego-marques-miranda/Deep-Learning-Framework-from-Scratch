@@ -57,7 +57,7 @@ prod_model.load('house_pricing_weights.pkl')
 
 print("\nRunning inference on new data:")
 # Sample data: [bedrooms, age]
-# Expected approximate targets: ~62.5, ~67.5, ~113.5
+# Expected approximate targets: ~72.5, ~67.5, ~113.5
 X_new = np.array([
     [3, 10],
     [5, 0],
