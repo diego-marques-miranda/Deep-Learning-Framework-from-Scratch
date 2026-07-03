@@ -1,6 +1,6 @@
 import numpy as np
 
-class Activation_ReLU:
+class ReLU:
     """
     Rectified Linear Unit (ReLU) activation function.
     
@@ -37,7 +37,7 @@ class Activation_ReLU:
         self.dinputs[self.inputs <= 0] = 0
         return self.dinputs
 
-class Activation_Leaky_ReLU:
+class Leaky_ReLU:
     """
     Leaky Rectified Linear Unit (Leaky ReLU) activation function.
     
@@ -74,7 +74,7 @@ class Activation_Leaky_ReLU:
         self.dinputs[self.inputs <= 0] *= self.neg_slope
         return self.dinputs
 
-class Activation_Linear:
+class Linear:
     """
     Linear (Identity) activation function.
     

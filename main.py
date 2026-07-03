@@ -27,8 +27,8 @@ X_scaled = X / np.array([5.0, 50.0])
 model = Model()
 
 # Hidden layers
-model.add(layers.Layer_Dense(2, 8, activation_func=activation_functions.Activation_ReLU()))
-model.add(layers.Layer_Dense(8, 4, activation_func=activation_functions.Activation_ReLU()))
+model.add(layers.Layer_Dense(2, 8, activation_func=activation_functions.ReLU()))
+model.add(layers.Layer_Dense(8, 4, activation_func=activation_functions.ReLU()))
 
 # Output layer (linear activation for regression)
 model.add(layers.Layer_Dense(4, 1, activation_func=activation_functions.Activation_Linear()))
@@ -48,9 +48,9 @@ model.save('house_pricing_weights.pkl')
 # Instantiate a new model to validate weight loading
 print("\nInitializing a fresh model instance...")
 prod_model = Model()
-prod_model.add(layers.Layer_Dense(2, 8, activation_func=activation_functions.Activation_ReLU()))
-prod_model.add(layers.Layer_Dense(8, 4, activation_func=activation_functions.Activation_ReLU()))
-prod_model.add(layers.Layer_Dense(4, 1, activation_func=activation_functions.Activation_Linear()))
+prod_model.add(layers.Layer_Dense(2, 8, activation_func=activation_functions.ReLU()))
+prod_model.add(layers.Layer_Dense(8, 4, activation_func=activation_functions.ReLU()))
+prod_model.add(layers.Layer_Dense(4, 1, activation_func=activation_functions.Linear()))
 
 # Load pre-trained weights
 prod_model.load('house_pricing_weights.pkl')
