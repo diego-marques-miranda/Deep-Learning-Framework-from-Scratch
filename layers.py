@@ -1,11 +1,49 @@
 import numpy as np
+from abc import ABC, abstractmethod    
 
-class Layer_Dense:
+class Base_Layer(ABC):
+    """
+    Abstract base class for layers.
+    
+    Defines the interface for all layers in the framework, ensuring they 
+    implement forward and backward passes.
+    """
+    @abstractmethod
+    def forward(self, inputs):
+        """
+        Performs the forward pass.
+        
+        Args:
+            inputs (np.ndarray): Input data from the previous layer.
+        """
+        pass
+    
+    @abstractmethod
+    def backward(self, dvalues):
+        """
+        Performs the backward pass.
+        
+        Args:
+            dvalues (np.ndarray): Gradient of the loss with respect to the output.
+        """
+        pass
+
+class Layer_Dense(Base_Layer):
     """
     Dense Layer (Fully Connected).
-    Each neuron in this layer connects to all received inputs.
+    
+    Each neuron in this layer connects to all received inputs. Performs a 
+    linear transformation followed by an optional activation function.
     """
     def __init__(self, n_inputs, n_nodes, activation_func=None):
+        """
+        Initializes the dense layer with He weight initialization.
+        
+        Args:
+            n_inputs (int): Number of input features.
+            n_nodes (int): Number of neurons in this layer.
+            activation_func (object, optional): Activation function instance.
+        """
         rng = np.random.default_rng()
 
         # He Initialization
@@ -26,6 +64,16 @@ class Layer_Dense:
         self.activation_func = activation_func
 
     def forward(self, inputs):
+        """
+        Performs the forward pass of the dense layer.
+        
+        Args:
+            inputs (np.ndarray): Input data from the previous layer.
+            
+        Returns:
+            np.ndarray: The output of the layer after linear transformation 
+                        and optional activation.
+        """
         # Save inputs to use during the derivative calculation (backward pass)
         self.inputs = inputs
 
@@ -39,6 +87,16 @@ class Layer_Dense:
         return self.output
     
     def backward(self, dvalues):
+        """
+        Performs the backward pass to calculate gradients for weights, biases, 
+        and inputs.
+        
+        Args:
+            dvalues (np.ndarray): Gradient of the loss with respect to the output.
+            
+        Returns:
+            np.ndarray: The gradient passed back to the previous layer.
+        """
         # If there's an activation, the gradient (dvalues) passes through the reverse filter first
         if self.activation_func:
             dvalues = self.activation_func.backward(dvalues)
