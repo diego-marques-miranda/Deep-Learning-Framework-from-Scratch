@@ -6,7 +6,7 @@ class Model:
     The Core Framework.
     Manages layers, compiles configurations, orchestrates training (fit), and makes predictions (predict).
     """
-    def __init__(self):
+    def __init__(self, scaler):
         self.layers = []
         self.loss_func = None
         self.optimizer = None
@@ -14,92 +14,98 @@ class Model:
         self.train_loss = None
         self.val_loss = None
 
+        self.scaler = scaler
+
     def add(self, layer):
+        """Appends a layer to the neural network architecture."""
         self.layers.append(layer)
 
     def compile(self, loss, optimizer):
+        """Configures the loss function and optimizer for training."""
         self.loss_func = loss
         self.optimizer = optimizer
 
-    def fit(self, X, y, epochs, batch_size, validation_split=0.0):
-        validation_size = int(len(X) * validation_split)
-
-        if validation_size > 0:
-            X_train = X[validation_size : ]
-            X_validation = X[ : validation_size]
-            y_train = y[validation_size : ]
-            y_validation = y[ : validation_size]
-        else:
-            X_train, X_validation = X, None
-            y_train, y_validation = y, None
-
+    def fit(self, train_dataloader, test_dataloader, epochs, train_metrics=[], test_metrics=[]):
+        """Orchestrates the training and evaluation loop across epochs."""
         for epoch in range(epochs):
-            # Batch Training
-            for i in range(0, len(X_train), batch_size):
-                X_batch = X_train[i:i + batch_size]
-                y_batch = y_train[i:i + batch_size]
+            # Reset metric states at the start of each epoch
+            for m in train_metrics: m.reset()
+            for m in test_metrics: m.reset()
 
+            # Batch Training
+            for X_batch, y_batch in train_dataloader:
                 output = X_batch
 
+                # Forward pass
                 for layer in self.layers:
                     output = layer.forward(output)
 
                 self.train_loss = self.loss_func.forward(output, y_batch)
 
+                # Backward pass & parameter optimization
                 gradient = self.loss_func.backward(output, y_batch)
-
                 for layer in reversed(self.layers):
                     gradient = layer.backward(gradient)
-
-                    if hasattr(layer, 'weights'):   # Updates the layer only if it has weights
+                    if hasattr(layer, 'weights'):
                         self.optimizer.update(layer)
 
-            # Full pass on training data to get precise MAPE
-            train_predictions = self.predict(X_train)
-            # We add 1e-8 to avoid ZeroDivisionError in case y_train has zeros
-            train_mape = np.mean(np.abs((y_train - train_predictions) / (y_train + 1e-8))) * 100
+                # Update training metrics
+                for m in train_metrics:
+                    m.update(y_batch, output)
 
-            if validation_size > 0:
-                val_predictions = self.predict(X_validation)
-                self.val_loss = self.loss_func.forward(val_predictions, y_validation)
-                val_mape = np.mean(np.abs((y_validation - val_predictions) / (y_validation + 1e-8))) * 100
+            # Test / Evaluation loop
+            for X_test, y_test in test_dataloader:
+                y_pred = self.predict(X_test)
 
-                if epoch % 50 == 0 or epoch == epochs - 1:
-                    print(f'Epoch: {epoch} | Train loss: {self.train_loss:.4f} - MAPE: {train_mape:.2f}% | Val loss: {self.val_loss:.4f} - Val MAPE: {val_mape:.2f}%')
-            else:
-                if epoch % 50 == 0 or epoch == epochs - 1:
-                    print(f'Epoch: {epoch} | Train loss: {self.train_loss:.4f} - MAPE: {train_mape:.2f}%')
+                # Update test metrics
+                for m in test_metrics:
+                    m.update(y_test, y_pred)
+
+            # Compile log outputs
+            train_epoch_metrics = [f"{m.__class__.__name__}: {m.result():.2f}%" for m in train_metrics]
+            test_epoch_metrics = [f"{m.__class__.__name__}: {m.result():.2f}%" for m in test_metrics]
+
+            # Print progress selectively
+            if epoch % (epochs // 20) == 0 or epoch == epochs - 1:
+                print(f"Epoch {epoch+1}/{epochs} | Training: {' | '.join(train_epoch_metrics)} | Test: {' | '.join(test_epoch_metrics)}")
 
     def predict(self, X):
+        """Performs a forward pass through all layers to generate predictions."""
         output = X
-
         for layer in self.layers:
             output = layer.forward(output)
-
         return output
     
     def save(self, path):
+        """Serializes layer parameters and scaler state into a pickle file."""
         parameters = []
 
         for layer in self.layers:
             if hasattr(layer, 'weights'):
                 parameters.append([layer.weights, layer.biases])
 
+        data_to_save = {
+            'parameters': parameters,
+            'scaler': self.scaler
+        }
+
         with open(path, 'wb') as file:
-            pickle.dump(parameters, file)
+            pickle.dump(data_to_save, file)
             
         print(f"Model saved to {path}")
 
     def load(self, path):
+        """Restores layer weights/biases and scaler state from a pickle file."""
         with open(path, 'rb') as file:
-            parameters = pickle.load(file)
+            data = pickle.load(file)
 
+        self.scaler = data['scaler']
         i = 0
 
         for layer in self.layers:
             if hasattr(layer, 'weights'):
-                layer.weights = parameters[i][0]
-                layer.biases = parameters[i][1]
+                layer.weights = data['parameters'][i][0]
+                layer.biases = data['parameters'][i][1]
                 i += 1
                 
-        print(f"Model loaded from {path}")
+    print(f"Model loaded from {path}")  
