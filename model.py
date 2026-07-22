@@ -108,4 +108,4 @@ class Model:
                 layer.biases = data['parameters'][i][1]
                 i += 1
                 
-    print(f"Model loaded from {path}")  
+        print(f"Model loaded from {path}")  
