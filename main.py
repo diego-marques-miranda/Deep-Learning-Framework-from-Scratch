@@ -11,34 +11,56 @@ from data.dataloader import DataLoader
 from metrics.metrics import MAPE
 from data.utils import train_test_split
 from model import Model 
+from data.preprocessing import MedianImputer
+
+# Initialize controlled random number generator for reproducibility
+rng = np.random.default_rng(112)
 
 # Load dataset & extract target/features
 data = pd.read_csv('housing.csv')
 y = data['median_house_value'].values.reshape(-1, 1)
-X = data['total_rooms'].values.reshape(-1, 1)
+X = data[['total_rooms', 
+          'housing_median_age', 
+          'latitude', 
+          'longitude', 
+          'total_bedrooms', 
+        #   'population', 
+        #   'households', 
+        #   'median_income'
+          ]].to_numpy()
 
-# Train/test split (80/20)
+# Train/test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-# Fit scaler on train only to prevent data leakage, then transform both
-model = Model(scaler=MinMaxScaler())
-model.scaler.fit(X_train)
-X_train = model.scaler.transform(X_train)
-X_test = model.scaler.transform(X_test)
+# Impute missing feature values using training set medians to prevent leakage
+medianImputer = MedianImputer()
+medianImputer.fit(X_train)
+X_train = medianImputer.transform(X_train)
+X_test = medianImputer.transform(X_test)
 
-# Setup batch iterators
-train_loader = DataLoader(X_train, y_train, batch_size=32)
-test_loader = DataLoader(X_test, y_test, batch_size=32)
+# Fit scalers on train set only to prevent data leakage, then scale features and target
+model = Model(scaler_X=MinMaxScaler(), scaler_y=MinMaxScaler())
+model.scaler_X.fit(X_train)
+model.scaler_y.fit(y_train)
+X_train = model.scaler_X.transform(X_train)
+X_test = model.scaler_X.transform(X_test)
+
+y_train = model.scaler_y.transform(y_train)
+y_test = model.scaler_y.transform(y_test)
+
+# Setup batch iterators with deterministic shuffling
+train_loader = DataLoader(X_train, y_train, batch_size=32, rng=rng)
+test_loader = DataLoader(X_test, y_test, batch_size=32, rng=rng)
 
 # Build architecture
-model.add(layers.Layer_Dense(1, 4, activation_func=activation_functions.ReLU()))
-model.add(layers.Layer_Dense(4, 4, activation_func=activation_functions.ReLU()))
-model.add(layers.Layer_Dense(4, 1, activation_func=activation_functions.Linear()))
+model.add(layers.Layer_Dense(5, 32, activation_func=activation_functions.ReLU(), rng=rng))
+model.add(layers.Layer_Dense(32, 32, activation_func=activation_functions.ReLU(), rng=rng))
+model.add(layers.Layer_Dense(32, 1, activation_func=activation_functions.Linear(), rng=rng))
 
 # Compile with loss and optimizer
 model.compile(
     loss=loss_functions.Mse(),
-    optimizer=optimizers.SGD(learning_rate=0.0001)
+    optimizer=optimizers.SGD(learning_rate=0.01)
 )
 
 print("Training model...")
