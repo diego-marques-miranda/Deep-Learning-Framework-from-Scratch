@@ -6,7 +6,7 @@ class Model:
     The Core Framework.
     Manages layers, compiles configurations, orchestrates training (fit), and makes predictions (predict).
     """
-    def __init__(self, scaler):
+    def __init__(self, scaler_X, scaler_y):
         self.layers = []
         self.loss_func = None
         self.optimizer = None
@@ -14,7 +14,9 @@ class Model:
         self.train_loss = None
         self.val_loss = None
 
-        self.scaler = scaler
+        self.scaler_X = scaler_X
+        self.scaler_y = scaler_y
+
 
     def add(self, layer):
         """Appends a layer to the neural network architecture."""
@@ -51,7 +53,7 @@ class Model:
 
                 # Update training metrics
                 for m in train_metrics:
-                    m.update(y_batch, output)
+                    m.update(self.scaler_y.inverse_transform(y_batch), self.scaler_y.inverse_transform(output))
 
             # Test / Evaluation loop
             for X_test, y_test in test_dataloader:
@@ -59,7 +61,7 @@ class Model:
 
                 # Update test metrics
                 for m in test_metrics:
-                    m.update(y_test, y_pred)
+                    m.update(self.scaler_y.inverse_transform(y_test), y_pred) # important to transform back to get accurate metrics
 
             # Compile log outputs
             train_epoch_metrics = [f"{m.__class__.__name__}: {m.result():.2f}%" for m in train_metrics]
@@ -74,7 +76,7 @@ class Model:
         output = X
         for layer in self.layers:
             output = layer.forward(output)
-        return output
+        return self.scaler_y.inverse_transform(output) # predicting a non normalized value
     
     def save(self, path):
         """Serializes layer parameters and scaler state into a pickle file."""
@@ -86,7 +88,8 @@ class Model:
 
         data_to_save = {
             'parameters': parameters,
-            'scaler': self.scaler
+            'scaler_X': self.scaler_X,
+            'scaler_y': self.scaler_y
         }
 
         with open(path, 'wb') as file:
@@ -99,7 +102,8 @@ class Model:
         with open(path, 'rb') as file:
             data = pickle.load(file)
 
-        self.scaler = data['scaler']
+        self.scaler_X = data['scaler_X']
+        self.scaler_y = data['scaler_y']
         i = 0
 
         for layer in self.layers:
