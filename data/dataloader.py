@@ -2,20 +2,21 @@ import numpy as np
 
 class DataLoader:
     """Iterates over dataset arrays in shuffled, fixed-size batches."""
-    def __init__(self, data, target, batch_size, shuffle=True):
+    def __init__(self, data, target, batch_size, shuffle=True, rng=np.random.default_rng()):
         self.data = data
         self.target = target
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.current_index = 0
         self.num_samples = len(data)
+        self.rng = rng
 
     def __iter__(self):
         """Resets iteration state and shuffles data arrays in unison if enabled."""
         self.current_index = 0
 
         if self.shuffle:
-            indexes = np.random.permutation(len(self.data))
+            indexes = self.rng.permutation(len(self.data))
             self.data = self.data[indexes]
             self.target = self.target[indexes]
 

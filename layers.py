@@ -35,7 +35,7 @@ class Layer_Dense(Base_Layer):
     Each neuron in this layer connects to all received inputs. Performs a 
     linear transformation followed by an optional activation function.
     """
-    def __init__(self, n_inputs, n_nodes, activation_func=None):
+    def __init__(self, n_inputs, n_nodes, activation_func=None, rng=np.random.default_rng()):
         """
         Initializes the dense layer with He weight initialization.
         
@@ -44,8 +44,6 @@ class Layer_Dense(Base_Layer):
             n_nodes (int): Number of neurons in this layer.
             activation_func (object, optional): Activation function instance.
         """
-        rng = np.random.default_rng()
-
         # He Initialization
         # Multiplying by the square root of (2 / n_inputs) prevents exploding/vanishing gradients
         self.weights = rng.standard_normal((n_inputs, n_nodes)) * np.sqrt(2.0 / n_inputs)
