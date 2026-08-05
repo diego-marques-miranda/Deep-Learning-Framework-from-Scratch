@@ -1,4 +1,5 @@
-from abc import ABC, abstractmethod    
+from abc import ABC, abstractmethod
+import numpy as np
 
 class Base_Optimizer(ABC):
     """
@@ -14,7 +15,7 @@ class Base_Optimizer(ABC):
         
         Args:
             layer (object): The layer instance containing weights, 
-                           biases, and their respective gradients.
+                            biases, and their respective gradients.
         """
         pass
 
@@ -40,10 +41,65 @@ class SGD(Base_Optimizer):
         
         Args:
             layer (object): The layer to update. Must have 'weights', 
-                           'biases', 'dweights', and 'dbiases' attributes.
+                            'biases', 'dweights', and 'dbiases' attributes.
         """
         # We move the weight in the opposite direction of the gradient 
         # (descending the mountain).
         # The learning rate acts as a "brake" for taking short, safe steps.
         layer.weights -= self.learning_rate * layer.dweights
         layer.biases -= self.learning_rate * layer.dbiases
+
+class SGD_Momentum(Base_Optimizer):
+    """
+    Stochastic Gradient Descent (SGD) optimizer with Momentum.
+    
+    Accelerates SGD in the relevant direction and dampens oscillations by 
+    accumulating a moving average of past gradients (velocity), behaving 
+    like a heavy ball rolling down a hill.
+    """
+    def __init__(self, learning_rate=0.01, beta=0.9):
+        """
+        Initializes the SGD with Momentum optimizer.
+        
+        Args:
+            learning_rate (float): The step size used for weight updates.
+            beta (float): The momentum decay hyperparameter (typically around 0.9). 
+                          Determines how much weight is given to previous velocity.
+        """
+        self.learning_rate = learning_rate
+        self.beta = beta
+        # State tracking dictionary to maintain historical velocity per layer
+        self.state = {}
+
+    def update(self, layer):
+        """
+        Updates the weights and biases of the provided layer using SGD with Momentum.
+        
+        Args:
+            layer (object): The layer to update. Must have 'weights', 
+                            'biases', 'dweights', and 'dbiases' attributes.
+        """
+        # Initialize velocity buffers for this layer if encountered for the first time
+        if layer not in self.state.keys():
+            if layer.dweights is not None:
+                self.state[layer] = {
+                    "weights": {
+                        "velocity": np.zeros_like(layer.dweights)
+                    },
+                    "biases": {
+                        "velocity": np.zeros_like(layer.dbiases)
+                    }
+                }
+
+        # Update velocity (exponential moving average of gradients)
+        # Beta dampens past velocity, while (1 - beta) incorporates the current gradient force
+        self.state[layer]['weights']['velocity'] = (
+            self.beta * self.state[layer]['weights']['velocity'] + (1 - self.beta) * layer.dweights
+        )
+        self.state[layer]['biases']['velocity'] = (
+            self.beta * self.state[layer]['biases']['velocity'] + (1 - self.beta) * layer.dbiases
+        )
+
+        # Update weights and biases using the accumulated momentum/velocity vector
+        layer.weights -= self.learning_rate * self.state[layer]['weights']['velocity']
+        layer.biases -= self.learning_rate * self.state[layer]['biases']['velocity']
