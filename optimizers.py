@@ -103,20 +103,19 @@ class SGD_Momentum(Base_Optimizer):
         # Update weights and biases using the accumulated momentum/velocity vector
         layer.weights -= self.learning_rate * self.state[layer]['weights']['velocity']
         layer.biases -= self.learning_rate * self.state[layer]['biases']['velocity']
-        
+
 class RMSprop(Base_Optimizer):
-    def __init__(self, learning_rate=0.01, beta=0.9, debug=False, debug_interval=100):
+
+    def __init__(self, learning_rate=0.01, beta=0.9):
+
         self.learning_rate = learning_rate
-        self.beta = beta
-        self.debug = debug
-        self.debug_interval = debug_interval
         self.state = {}
-        self.step_count = 0
+        self.beta = beta
 
     def update(self, layer):
-        # Inicializa o estado se a camada ainda não existir no dict
+
         if layer not in self.state.keys():
-            if getattr(layer, 'dweights', None) is not None:
+            if layer.dweights is not None:
                 self.state[layer] = {
                     "weights": {
                         "cache": np.zeros_like(layer.dweights)
@@ -126,11 +125,6 @@ class RMSprop(Base_Optimizer):
                     }
                 }
 
-        # Garante que a camada possui estado inicializado
-        if layer not in self.state:
-            return
-
-        # 1. Atualização do Cache (Média Móvel dos Quadrados dos Gradientes)
         self.state[layer]['weights']['cache'] = (
             self.beta * self.state[layer]['weights']['cache'] + (1 - self.beta) * (layer.dweights ** 2)
         )
@@ -138,27 +132,5 @@ class RMSprop(Base_Optimizer):
             self.beta * self.state[layer]['biases']['cache'] + (1 - self.beta) * (layer.dbiases ** 2)
         )
 
-        # 2. Cálculos intermediários para os Pesos
-        w_cache = self.state[layer]['weights']['cache']
-        normalized_gradient_w = layer.dweights / (np.sqrt(w_cache) + 1e-8)
-        effective_step_w = self.learning_rate * normalized_gradient_w
-
-        # 3. Atualização dos Parâmetros
-        layer.weights -= effective_step_w
-        layer.biases -= self.learning_rate * layer.dbiases / (np.sqrt(self.state[layer]['biases']['cache']) + 1e-8)
-
-        # 4. Disparo de Debug (imprime informações do primeiro peso da camada)
-        self.step_count += 1
-        if self.debug and (self.step_count % self.debug_interval == 0):
-            # Extrai o primeiro elemento para amostragem
-            g = layer.dweights.flat[0]
-            c = w_cache.flat[0]
-            ng = normalized_gradient_w.flat[0]
-            es = effective_step_w.flat[0]
-
-            print(f"--- [RMSprop Debug - Step {self.step_count}] ---")
-            print(f"Peso 1:")
-            print(f"  gradient            = {g:.8f}")
-            print(f"  cache               = {c:.8f}")
-            print(f"  normalized_gradient = {ng:.8f}")
-            print(f"  effective_step      = {es:.8f}\n")
+        layer.weights -= self.learning_rate * layer.dweights / (self.state[layer]['weights']['cache'] ** (1/2) + 1e-8)
+        layer.biases -= self.learning_rate * layer.dbiases / (self.state[layer]['biases']['cache'] ** (1/2) + 1e-8)
