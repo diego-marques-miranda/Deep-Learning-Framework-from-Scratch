@@ -233,3 +233,64 @@ class Tanh(Base_Activation_Function):
         self.dinputs = dvalues * (1 - self.output ** 2)
 
         return self.dinputs
+    
+class GELU(Base_Activation_Function):
+    """
+    Gaussian Error Linear Unit (GELU) activation function.
+
+    Computes f(x) = 0.5 * x * (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x^3))).
+    """
+    def __init__(self):
+        self.inputs = None
+        self.output = None
+
+    def forward(self, inputs):
+        """
+        Performs the forward pass of the GELU function.
+
+        Args:
+            inputs (np.ndarray): Input data from the previous layer.
+
+        Returns:
+            np.ndarray: The activated input.
+        """
+        self.inputs = inputs
+
+        cubic = inputs ** 3
+        inner = inputs + 0.044715 * cubic
+        tanh_input = np.sqrt(2 / np.pi) * inner
+        
+        self.tanh_val = np.tanh(tanh_input)
+        
+        self.output = 0.5 * inputs * (1 + self.tanh_val)
+
+        return self.output
+
+    def backward(self, dvalues):
+        """
+        Performs the backward pass to calculate the gradient of the loss
+        with respect to the inputs for GELU.
+
+        Args:
+            dvalues (np.ndarray): Gradient of the loss with respect to the output.
+
+        Returns:
+            np.ndarray: The gradient passed back to the previous layer.
+        """
+        x = self.inputs
+        
+        # Derivative of the inner function g(x) = sqrt(2/pi) * (x + 0.044715 * x^3)
+        # g'(x) = sqrt(2/pi) * (1 + 3 * 0.044715 * x^2) = sqrt(2/pi) * (1 + 0.134145 * x^2)
+        g_prime = np.sqrt(2 / np.pi) * (1 + 0.134145 * (x ** 2))
+        
+        # Hyperbolic secant squared: sech^2(x) = 1 - tanh^2(x)
+        sech_sq = 1 - (self.tanh_val ** 2)
+        
+        # Full GELU derivative:
+        # f'(x) = 0.5 * (1 + tanh(g(x))) + 0.5 * x * sech^2(g(x)) * g'(x)
+        derivative = 0.5 * (1 + self.tanh_val) + 0.5 * x * sech_sq * g_prime
+        
+        # Final gradient
+        self.dinputs = dvalues * derivative
+
+        return self.dinputs
