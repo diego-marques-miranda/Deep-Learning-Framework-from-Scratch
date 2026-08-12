@@ -187,3 +187,49 @@ class Sigmoid(Base_Activation_Function):
         self.dinputs = dvalues * (self.output * (1 - self.output))
 
         return self.dinputs
+    
+class Tanh(Base_Activation_Function):
+    """
+    Hyperbolic Tangent (Tanh) activation function.
+
+    Computes f(x) = tanh(x). Maps input values to a range between -1 and 1,
+    providing a zero-centered non-linear activation function.
+    """
+    def __init__(self):
+        self.inputs = None
+        self.output = None
+
+    def forward(self, inputs):
+        """
+        Performs the forward pass of the Tanh function.
+
+        Args:
+            inputs (np.ndarray): Input data from the previous layer.
+
+        Returns:
+            np.ndarray: The activated input, with values between -1 and 1.
+        """
+        self.inputs = inputs
+        self.output = (
+            np.e ** inputs - np.e ** (-1 * inputs)
+        ) / (
+            np.e ** inputs + np.e ** (-1 * inputs)
+        )
+
+        return self.output
+
+    def backward(self, dvalues):
+        """
+        Performs the backward pass to calculate the gradient of the loss
+        with respect to the inputs.
+
+        Args:
+            dvalues (np.ndarray): Gradient of the loss with respect to the output.
+
+        Returns:
+            np.ndarray: The gradient passed back to the previous layer.
+        """
+        # Tanh derivative: f'(x) = 1 - f(x)^2
+        self.dinputs = dvalues * (1 - self.output ** 2)
+
+        return self.dinputs
