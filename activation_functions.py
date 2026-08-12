@@ -145,3 +145,45 @@ class Linear(Base_Activation_Function):
             np.ndarray: The unchanged gradient.
         """
         return dvalues
+
+class Sigmoid(Base_Activation_Function):
+    """
+    Sigmoid activation function.
+
+    Computes f(x) = 1 / (1 + e^(-x)). Maps input values to a range
+    between 0 and 1, making it suitable for binary classification tasks.
+    """
+    def __init__(self):
+        self.inputs = None
+        self.output = None
+
+    def forward(self, inputs):
+        """
+        Performs the forward pass of the Sigmoid function.
+
+        Args:
+            inputs (np.ndarray): Input data from the previous layer.
+
+        Returns:
+            np.ndarray: The activated input, with values between 0 and 1.
+        """
+        self.inputs = inputs
+        self.output = 1 / (1 + (np.e ** (-1 * inputs)))
+
+        return self.output
+
+    def backward(self, dvalues):
+        """
+        Performs the backward pass to calculate the gradient of the loss
+        with respect to the inputs.
+
+        Args:
+            dvalues (np.ndarray): Gradient of the loss with respect to the output.
+
+        Returns:
+            np.ndarray: The gradient passed back to the previous layer.
+        """
+        # Sigmoid derivative: f'(x) = f(x) * (1 - f(x))
+        self.dinputs = dvalues * (self.output * (1 - self.output))
+
+        return self.dinputs
