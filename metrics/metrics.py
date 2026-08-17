@@ -37,3 +37,39 @@ class MAPE(Base_Metric):
         """Resets the sum and sample counters to zero."""
         self.sum_mape = 0
         self.count = 0
+
+class R2(Base_Metric):
+    """R-squared (Coefficient of Determination) metric tracker."""
+    def __init__(self):
+        self.reset()
+
+    def update(self, y_true, y_pred):
+        """Updates cumulative statistics for R² calculation with batch data."""
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+        
+        self.ss_res += np.sum((y_true - y_pred) ** 2)
+        
+        self.sum_y += np.sum(y_true)
+        self.sum_y_sq += np.sum(y_true ** 2)
+        self.count += len(y_true)
+
+    def result(self):
+        """Computes and returns the overall R-squared score."""
+        if self.count == 0:
+            return 0.0
+            
+        # SS_tot = Σ(y^2) - (Σy)^2 / n
+        ss_tot = self.sum_y_sq - (self.sum_y ** 2) / self.count
+        
+        if ss_tot == 0:
+            return 0.0
+            
+        return 1.0 - (self.ss_res / ss_tot)
+    
+    def reset(self):
+        """Resets the accumulated statistics and counters to zero."""
+        self.ss_res = 0.0
+        self.sum_y = 0.0
+        self.sum_y_sq = 0.0
+        self.count = 0
