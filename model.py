@@ -64,8 +64,8 @@ class Model:
                     m.update(self.scaler_y.inverse_transform(y_test), y_pred) # important to transform back to get accurate metrics
 
             # Compile log outputs
-            train_epoch_metrics = [f"{m.__class__.__name__}: {m.result():.2f}%" for m in train_metrics]
-            test_epoch_metrics = [f"{m.__class__.__name__}: {m.result():.2f}%" for m in test_metrics]
+            train_epoch_metrics = [f"{m.__class__.__name__}: {m.result():.2f}" for m in train_metrics]
+            test_epoch_metrics = [f"{m.__class__.__name__}: {m.result():.2f}" for m in test_metrics]
 
             # Print progress selectively
             if epoch % (epochs // 20) == 0 or epoch == epochs - 1:
