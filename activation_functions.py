@@ -213,7 +213,7 @@ class Tanh(Base_Activation_Function):
         self.output = (
             np.e ** inputs - np.e ** (-1 * inputs)
         ) / (
-            np.e ** inputs + np.e ** (-1 * inputs)
+            np.e ** inputs + np.e ** (-1 * inputs) + 1e-10
         )
 
         return self.output
