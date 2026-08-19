@@ -294,3 +294,27 @@ class GELU(Base_Activation_Function):
         self.dinputs = dvalues * derivative
 
         return self.dinputs
+
+class Softmax(Base_Activation_Function):
+    """Softmax activation that converts logits into class probabilities."""
+
+    def __init__(self):
+        self.inputs = None
+        self.output = None
+
+    def forward(self, inputs):
+        """Perform a numerically stable softmax over the last axis."""
+        self.inputs = inputs
+        shifted_inputs = inputs - np.max(inputs, axis=-1, keepdims=True)
+        exp_values = np.exp(shifted_inputs)
+        self.output = exp_values / np.sum(exp_values, axis=-1, keepdims=True)
+        return self.output
+
+    def backward(self, dvalues):
+        """Propagate gradients through the softmax Jacobian."""
+        self.dinputs = self.output * (
+            dvalues
+            - np.sum(dvalues * self.output, axis=-1, keepdims=True)
+        )
+        return self.dinputs
+
