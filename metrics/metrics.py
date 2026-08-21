@@ -75,20 +75,25 @@ class R2(Base_Metric):
         self.count = 0
 
 class Accuracy(Base_Metric):
+    """Classification accuracy metric tracker."""
     def __init__(self):
         self.reset()
 
     def update(self, y_true, y_pred):
+        """Updates cumulative correct predictions with batch data."""
+        # Converts predicted probabilities/logits to class indices
         correct_pred = np.argmax(y_pred, axis=1)
 
         self.samples += len(y_true)
         self.correct_pred += np.sum(y_true == correct_pred)
 
     def result(self):
+        """Computes and returns the overall accuracy score."""
         if self.samples == 0:
             return 0.0
         return self.correct_pred / self.samples
 
     def reset(self):
+        """Resets the samples and correct prediction counters to zero."""
         self.samples = 0
         self.correct_pred = 0
