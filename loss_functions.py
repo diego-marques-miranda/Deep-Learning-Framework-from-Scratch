@@ -71,3 +71,58 @@ class Mse(Base_Loss_Function):
         # so that large batch gradients don't explode the network.
         self.dinputs = (2 / samples) * (y_pred - y_real)
         return self.dinputs
+
+class CrossEntropy(Base_Loss_Function):
+    """
+    Categorical Cross-Entropy loss function.
+    
+    Computes the negative log-likelihood of the true class labels given 
+    the predicted probabilities. Used primarily in classification tasks.
+    Assumes y_real contains sparse labels (class indices), not one-hot encoded vectors.
+    """
+    def __init__(self):
+        self.dinputs = None
+        self.output = None
+
+    def forward(self, y_pred, y_real):
+        """
+        Performs the forward pass of the Cross-Entropy function.
+        
+        Args:
+            y_pred (np.ndarray): Predicted probabilities from the model.
+            y_real (np.ndarray): Ground truth target values (class indices).
+            
+        Returns:
+            float: The calculated categorical cross-entropy loss.
+        """
+        # Extracts the predicted probability for the correct target class for each sample in the batch
+        prob = y_pred[np.arange(len(y_pred)), y_real]
+
+        self.output = (-np.log(prob + 1e-15)).mean()
+
+        return self.output
+    
+    def backward(self, y_pred, y_real):
+        """
+        Performs the backward pass to calculate the gradient of the loss 
+        with respect to the model outputs (predictions).
+        
+        Args:
+            y_pred (np.ndarray): Predicted probabilities from the model.
+            y_real (np.ndarray): Ground truth target values (class indices).
+            
+        Returns:
+            np.ndarray: The gradient of the loss with respect to inputs.
+        """
+        # Initialize gradients array with the same shape as predictions
+        self.dinputs = np.zeros_like(y_pred)
+
+        # Extract probabilities of the correct classes
+        prob = y_pred[np.arange(len(y_pred)), y_real]
+
+        # The derivative of -log(x) with respect to x is -1/x.
+        self.dinputs[np.arange(len(y_pred)), y_real] = -1 / (prob + 1e-15)
+
+        self.dinputs /= len(y_pred)
+
+        return self.dinputs
