@@ -73,3 +73,22 @@ class R2(Base_Metric):
         self.sum_y = 0.0
         self.sum_y_sq = 0.0
         self.count = 0
+
+class Accuracy(Base_Metric):
+    def __init__(self):
+        self.reset()
+
+    def update(self, y_true, y_pred):
+        correct_pred = np.argmax(y_pred, axis=1)
+
+        self.samples += len(y_true)
+        self.correct_pred += np.sum(y_true == correct_pred)
+
+    def result(self):
+        if self.samples == 0:
+            return 0.0
+        return self.correct_pred / self.samples
+
+    def reset(self):
+        self.samples = 0
+        self.correct_pred = 0
