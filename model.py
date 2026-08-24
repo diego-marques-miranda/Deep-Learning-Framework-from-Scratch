@@ -6,7 +6,7 @@ class Model:
     The Core Framework.
     Manages layers, compiles configurations, orchestrates training (fit), and makes predictions (predict).
     """
-    def __init__(self, scaler_X, scaler_y):
+    def __init__(self, scaler_X, scaler_y=None):
         self.layers = []
         self.loss_func = None
         self.optimizer = None
@@ -53,7 +53,10 @@ class Model:
 
                 # Update training metrics
                 for m in train_metrics:
-                    m.update(self.scaler_y.inverse_transform(y_batch), self.scaler_y.inverse_transform(output))
+                    if self.scaler_y:
+                        m.update(self.scaler_y.inverse_transform(y_batch), self.scaler_y.inverse_transform(output))
+                    else:
+                        m.update(y_batch, output)
 
             # Test / Evaluation loop
             for X_test, y_test in test_dataloader:
@@ -61,8 +64,10 @@ class Model:
 
                 # Update test metrics
                 for m in test_metrics:
-                    m.update(self.scaler_y.inverse_transform(y_test), y_pred) # important to transform back to get accurate metrics
-
+                    if self.scaler_y:
+                        m.update(self.scaler_y.inverse_transform(y_test), y_pred) # important to transform back to get accurate metrics
+                    else:
+                        m.update(y_test, y_pred)
             # Compile log outputs
             train_epoch_metrics = [f"{m.__class__.__name__}: {m.result():.2f}" for m in train_metrics]
             test_epoch_metrics = [f"{m.__class__.__name__}: {m.result():.2f}" for m in test_metrics]
@@ -76,8 +81,12 @@ class Model:
         output = X
         for layer in self.layers:
             output = layer.forward(output)
-        return self.scaler_y.inverse_transform(output) # predicting a non normalized value
-    
+
+        if self.scaler_y:
+            return self.scaler_y.inverse_transform(output) # predicting a non normalized value
+        else:
+            return output
+
     def save(self, path):
         """Serializes layer parameters and scaler state into a pickle file."""
         parameters = []
