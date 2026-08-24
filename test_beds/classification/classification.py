@@ -1,3 +1,4 @@
+from pathlib import Path
 import numpy as np
 import pickle
 import pandas as pd
@@ -16,7 +17,9 @@ from model import Model
 rng = np.random.default_rng(112)
 
 # Load dataset & extract target/features
-data = pd.read_csv('IRIS.csv')
+DATA_PATH = Path(__file__).parent / "IRIS.csv"
+
+data = pd.read_csv(DATA_PATH)
 
 class_mapping = {
     0: "Iris-setosa",

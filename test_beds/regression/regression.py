@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pickle
 import pandas as pd
@@ -8,7 +10,7 @@ import loss_functions
 import optimizers
 from data.scaler import MinMaxScaler 
 from data.dataloader import DataLoader
-from metrics.metrics import MAPE
+from metrics.metrics import MAPE, R2
 from data.utils import train_test_split
 from model import Model 
 from data.preprocessing import MedianImputer
@@ -17,16 +19,19 @@ from data.preprocessing import MedianImputer
 rng = np.random.default_rng(112)
 
 # Load dataset & extract target/features
-data = pd.read_csv('housing.csv')
+DATA_PATH = Path(__file__).parent / "housing.csv"
+
+data = pd.read_csv(DATA_PATH)
+
 y = data['median_house_value'].values.reshape(-1, 1)
 X = data[['total_rooms', 
           'housing_median_age', 
           'latitude', 
           'longitude', 
           'total_bedrooms', 
-        #   'population', 
-        #   'households', 
-        #   'median_income'
+          'population', 
+          'households', 
+          'median_income'
           ]].to_numpy()
 
 # Train/test split
@@ -53,20 +58,20 @@ train_loader = DataLoader(X_train, y_train, batch_size=32, rng=rng)
 test_loader = DataLoader(X_test, y_test, batch_size=32, rng=rng)
 
 # Build architecture
-model.add(layers.Layer_Dense(5, 32, activation_func=activation_functions.ReLU(), rng=rng))
-model.add(layers.Layer_Dense(32, 32, activation_func=activation_functions.ReLU(), rng=rng))
+model.add(layers.Layer_Dense(8, 32, activation_func=activation_functions.GELU(), rng=rng))
+model.add(layers.Layer_Dense(32, 32, activation_func=activation_functions.GELU(), rng=rng))
 model.add(layers.Layer_Dense(32, 1, activation_func=activation_functions.Linear(), rng=rng))
 
 # Compile with loss and optimizer
 model.compile(
     loss=loss_functions.Mse(),
-    optimizer=optimizers.SGD(learning_rate=0.01)
+    optimizer=optimizers.Adam(learning_rate=0.0001)
 )
 
 print("Training model...")
 
-train_metrics = [MAPE()]
-test_metrics = [MAPE()]
+train_metrics = [R2()]
+test_metrics = [R2()]
 
 # Run training loop with validation
 model.fit(
