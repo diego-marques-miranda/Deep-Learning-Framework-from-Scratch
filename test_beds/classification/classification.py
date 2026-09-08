@@ -1,4 +1,9 @@
+import sys
 from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+
 import numpy as np
 import pickle
 import pandas as pd
@@ -42,10 +47,11 @@ X = data[['sepal_length',
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, rng=rng)
 
 # Fit scalers on train set only to prevent data leakage, then scale features 
-model = Model(scaler_X=MinMaxScaler())
-model.scaler_X.fit(X_train)
-X_train = model.scaler_X.transform(X_train)
-X_test = model.scaler_X.transform(X_test)
+model = Model()
+scaler_X = MinMaxScaler()
+scaler_X.fit(X_train)
+X_train = scaler_X.transform(X_train)
+X_test = scaler_X.transform(X_test)
 
 # Setup batch iterators with deterministic shuffling
 train_loader = DataLoader(X_train, y_train, batch_size=32, rng=rng)
