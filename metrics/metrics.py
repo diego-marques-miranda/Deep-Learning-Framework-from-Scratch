@@ -156,3 +156,71 @@ class MacroPrecision(Base_Metric):
         self.num_classes = None
         self.true_positives = None
         self.false_positives = None
+
+class MacroRecall(Base_Metric):
+    """Macro-averaged recall for multiclass classification."""
+
+    def __init__(self):
+        self.reset()
+
+    def update(self, y_true, y_pred):
+        """
+        Accumulates true positives and false negatives for each class.
+        ``y_pred`` is expected to contain class probabilities or scores.
+        """
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+
+        num_classes = y_pred.shape[1]
+        predicted_classes = np.argmax(y_pred, axis=1)
+
+        if self.num_classes is None:
+            self.num_classes = num_classes
+            self.true_positives = np.zeros(
+                num_classes,
+                dtype=np.int64
+            )
+            self.false_negatives = np.zeros(
+                num_classes,
+                dtype=np.int64
+            )
+
+        if num_classes != self.num_classes:
+            raise ValueError(
+                "Number of classes in y_pred changed between updates."
+            )
+
+        for class_index in range(self.num_classes):
+            actual_positive = y_true == class_index
+            predicted_positive = predicted_classes == class_index
+
+            self.true_positives[class_index] += np.sum(
+                actual_positive & predicted_positive
+            )
+
+            self.false_negatives[class_index] += np.sum(
+                actual_positive & ~predicted_positive
+            )
+
+    def result(self):
+        if self.num_classes is None:
+            return 0.0
+
+        denominators = (
+            self.true_positives
+            + self.false_negatives
+        )
+
+        recall_per_class = np.divide(
+            self.true_positives,
+            denominators,
+            out=np.zeros(self.num_classes, dtype=float),
+            where=denominators != 0
+        )
+
+        return np.mean(recall_per_class)
+
+    def reset(self):
+        self.num_classes = None
+        self.true_positives = None
+        self.false_negatives = None
