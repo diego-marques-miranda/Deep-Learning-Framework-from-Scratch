@@ -97,3 +97,62 @@ class Accuracy(Base_Metric):
         """Resets the samples and correct prediction counters to zero."""
         self.samples = 0
         self.correct_pred = 0
+
+class MacroPrecision(Base_Metric):
+    """Macro-averaged precision for multiclass classification."""
+
+    def __init__(self):
+        self.reset()
+
+    def update(self, y_true, y_pred):
+        """
+        Accumulates true positives and false positives for each class.
+        ``y_pred`` is expected to contain class probabilities or scores.
+        """
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+
+        num_classes = y_pred.shape[1]
+        predicted_classes = np.argmax(y_pred, axis=1)
+
+        if self.true_positives is None:
+            self.num_classes = num_classes
+            self.true_positives = np.zeros(num_classes, dtype=np.int64)
+            self.false_positives = np.zeros(num_classes, dtype=np.int64)
+
+        if num_classes != self.num_classes:
+            raise ValueError(
+                "Number of classes in y_pred changed between updates."
+            )
+
+        for class_index in range(self.num_classes):
+            predicted_positive = predicted_classes == class_index
+            actual_positive = y_true == class_index
+
+            self.true_positives[class_index] += np.sum(
+                predicted_positive & actual_positive
+            )
+
+            self.false_positives[class_index] += np.sum(
+                predicted_positive & ~actual_positive
+            )
+
+    def result(self):
+        if self.num_classes is None:
+            return 0.0
+
+        denominators = self.true_positives + self.false_positives
+
+        precision_per_class = np.divide(
+            self.true_positives,
+            denominators,
+            out=np.zeros(self.num_classes, dtype=float),
+            where=denominators != 0
+        )
+
+        return np.mean(precision_per_class)
+
+    def reset(self):
+        self.num_classes = None
+        self.true_positives = None
+        self.false_positives = None
