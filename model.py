@@ -1,4 +1,5 @@
 import pickle
+import copy
 
 
 class Model:
@@ -18,6 +19,12 @@ class Model:
 
         self.history = {}
 
+        # Training state
+        self.best_epoch = None
+        self.best_value = None
+        self.epochs_trained = 0
+        self.stopped_early = False
+
     def add(self, layer):
         """Appends a layer to the neural network architecture."""
         self.layers.append(layer)
@@ -33,7 +40,13 @@ class Model:
         val_dataloader,
         epochs,
         train_metrics=None,
-        val_metrics=None
+        val_metrics=None,
+        early_stopping=False,
+        monitor="val_loss",
+        mode="min",
+        patience=30,
+        min_delta=0.0,
+        restore_best_weights=True
     ):
         """Orchestrates the training and validation loop across epochs."""
 
@@ -43,6 +56,16 @@ class Model:
         if val_metrics is None:
             val_metrics = []
 
+        if mode not in {"min", "max"}:
+            raise ValueError("mode must be either 'min' or 'max'")
+
+        if patience < 0:
+            raise ValueError("patience must be greater than or equal to 0")
+
+        if min_delta < 0:
+            raise ValueError("min_delta must be greater than or equal to 0")
+
+        # History
         self.history = {
             "loss": [],
             "val_loss": []
@@ -53,6 +76,20 @@ class Model:
 
         for metric in val_metrics:
             self.history[f"val_{metric.__class__.__name__}"] = []
+
+        if monitor not in self.history:
+            raise ValueError(
+                f"Monitor '{monitor}' is not available in the training history."
+            )
+
+        # Reset training state
+        self.best_epoch = None
+        self.best_value = None
+        self.epochs_trained = 0
+        self.stopped_early = False
+
+        best_weights = None
+        patience_counter = 0
 
         print_interval = max(1, epochs // 20)
 
@@ -139,6 +176,45 @@ class Model:
                 )
 
             # -------------------------
+            # Early stopping / checkpoint
+            # -------------------------
+
+            if early_stopping:
+
+                current_value = self.history[monitor][-1]
+
+                if self.best_value is None:
+                    improved = True
+                elif mode == "min":
+                    improved = current_value < (
+                        self.best_value - min_delta
+                    )
+                else:
+                    improved = current_value > (
+                        self.best_value + min_delta
+                    )
+
+                if improved:
+                    self.best_value = current_value
+                    self.best_epoch = epoch + 1
+                    patience_counter = 0
+
+                    # Save a snapshot of trainable parameters
+                    best_weights = []
+
+                    for layer in self.layers:
+                        if hasattr(layer, "weights"):
+                            best_weights.append({
+                                "weights": copy.deepcopy(layer.weights),
+                                "biases": copy.deepcopy(layer.biases)
+                            })
+
+                else:
+                    patience_counter += 1
+
+            self.epochs_trained = epoch + 1
+
+            # -------------------------
             # Print progress
             # -------------------------
 
@@ -161,6 +237,43 @@ class Model:
                     f"Val Loss: {self.val_loss:.4f} | "
                     f"{' | '.join(val_epoch_metrics)}"
                 )
+
+            # -------------------------
+            # Early stopping condition
+            # -------------------------
+
+            if early_stopping and patience_counter >= patience:
+
+                self.stopped_early = True
+
+                print(
+                    f"\nEarly stopping at epoch {epoch + 1}. "
+                    f"Best {monitor}: {self.best_value:.4f} "
+                    f"at epoch {self.best_epoch}."
+                )
+
+                break
+
+        # -------------------------
+        # Restore best weights
+        # -------------------------
+
+        if (
+            early_stopping
+            and restore_best_weights
+            and best_weights is not None
+        ):
+            i = 0
+
+            for layer in self.layers:
+                if hasattr(layer, "weights"):
+                    layer.weights = copy.deepcopy(best_weights[i]["weights"])
+                    layer.biases = copy.deepcopy(best_weights[i]["biases"])
+                    i += 1
+
+            print(
+                f"Restored best weights from epoch {self.best_epoch}."
+            )
 
     def predict(self, X):
         """Performs a forward pass through all layers to generate predictions."""
