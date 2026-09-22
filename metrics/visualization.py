@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def _validate_history(history, metric_names):
@@ -145,4 +146,68 @@ def plot_history(history, metrics=None, save_path=None):
 		figure.savefig(save_path, bbox_inches="tight")
 	plt.show()
 	return figure
-    
+
+class ConfusionMatrix:
+    """Accumulates a multiclass confusion matrix across batches."""
+
+    def __init__(self):
+        self.reset()
+
+    def update(self, y_true, y_pred):
+        """
+        Accumulates confusion matrix counts for a batch.
+
+        ``y_true`` contains integer class labels.
+        ``y_pred`` is expected to contain class probabilities or scores.
+        """
+        y_true = np.asarray(y_true)
+        y_pred = np.asarray(y_pred)
+
+        if y_pred.ndim != 2:
+            raise ValueError(
+                "y_pred must be a 2D array with shape "
+                "(n_samples, n_classes)."
+            )
+
+        num_classes = y_pred.shape[1]
+        predicted_classes = np.argmax(y_pred, axis=1)
+
+        if self.num_classes is None:
+            self.num_classes = num_classes
+            self.matrix = np.zeros(
+                (num_classes, num_classes),
+                dtype=np.int64
+            )
+
+        if num_classes != self.num_classes:
+            raise ValueError(
+                "Number of classes in y_pred changed between updates."
+            )
+
+        if len(y_true) != len(predicted_classes):
+            raise ValueError(
+                "y_true and y_pred must contain the same number of samples."
+            )
+
+        if np.any(y_true < 0) or np.any(y_true >= self.num_classes):
+            raise ValueError(
+                "y_true contains class labels outside the valid range."
+            )
+
+        np.add.at(
+            self.matrix,
+            (y_true, predicted_classes),
+            1
+        )
+
+    def result(self):
+        """Returns the accumulated confusion matrix."""
+        if self.matrix is None:
+            return np.zeros((0, 0), dtype=np.int64)
+
+        return self.matrix.copy()
+
+    def reset(self):
+        """Clears the accumulated confusion matrix."""
+        self.num_classes = None
+        self.matrix = None
