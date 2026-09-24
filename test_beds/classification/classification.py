@@ -75,8 +75,8 @@ test_metrics = [Accuracy()]
 # Run training loop with validation
 model.fit(
     train_dataloader=train_loader, 
-    test_dataloader=test_loader, 
+    val_dataloader=test_loader, 
     epochs=500, 
     train_metrics=train_metrics, 
-    test_metrics=test_metrics
+    val_metrics=test_metrics
 ) 
