@@ -44,14 +44,16 @@ X_train = medianImputer.transform(X_train)
 X_test = medianImputer.transform(X_test)
 
 # Fit scalers on train set only to prevent data leakage, then scale features and target
-model = Model(scaler_X=MinMaxScaler(), scaler_y=MinMaxScaler())
-model.scaler_X.fit(X_train)
-model.scaler_y.fit(y_train)
-X_train = model.scaler_X.transform(X_train)
-X_test = model.scaler_X.transform(X_test)
+model = Model()
+scaler_X = MinMaxScaler()
+scaler_y = MinMaxScaler()
+scaler_X.fit(X_train)
+scaler_y.fit(y_train)
+X_train = scaler_X.transform(X_train)
+X_test = scaler_X.transform(X_test)
 
-y_train = model.scaler_y.transform(y_train)
-y_test = model.scaler_y.transform(y_test)
+y_train = scaler_y.transform(y_train)
+y_test = scaler_y.transform(y_test)
 
 # Setup batch iterators with deterministic shuffling
 train_loader = DataLoader(X_train, y_train, batch_size=32, rng=rng)
@@ -76,10 +78,10 @@ test_metrics = [R2()]
 # Run training loop with validation
 model.fit(
     train_dataloader=train_loader, 
-    test_dataloader=test_loader, 
+    val_dataloader=test_loader, 
     epochs=500, 
     train_metrics=train_metrics, 
-    test_metrics=test_metrics
+    val_metrics=test_metrics
 ) 
 
 print("\nSaving model weights...")
